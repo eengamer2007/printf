@@ -2,10 +2,11 @@
 	.global _start
 	string: .asciz "test test test or not \n test %"
 
+.include "decimal_format.s"
+
 _start:
 	mov $string, %rdi
 	call printf
-
 
 	mov $60, %rax
 	xor %rdi, %rdi

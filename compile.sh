@@ -1,1 +1,2 @@
-gcc -no-pie -g -nostdlib -o out printf.s
+gcc -no-pie -g -nostdlib -o out printf.s && \
+./out
