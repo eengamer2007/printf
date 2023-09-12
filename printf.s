@@ -3,6 +3,8 @@
 	string: .asciz "test test test or not \n test %"
 
 .include "decimal_format.s"
+.include "print_nul_string.s"
+
 
 _start:
 	mov $string, %rdi
