@@ -28,7 +28,7 @@ printf:
 
 		mov %rbx, %r10
 		inc %rbx
-		cmpq $0, (%r15, %r10)
+		cmpb $0, (%r15, %r10)
 		jnz printloop
 	
 	mov %rbp, %rsp
