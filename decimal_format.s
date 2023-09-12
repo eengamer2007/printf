@@ -7,14 +7,17 @@ int_to_str:
 	push %rbp
 	mov %rsp, %rbp
 	
-_loop:
-	dec rdi
-	jz end
-
+_df_loop:
+	dec %rdi
+	jz _df_end
 	
+	
+	incb (%rsi)
+	_df_inner_loop:
 
-	jmp loop
-_end:
+
+	jmp _df_loop
+_df_end:
 
 	mov %rbp, %rsp
 	pop %rbp

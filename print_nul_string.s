@@ -6,21 +6,21 @@ print_nul_string:
   movq  %rdi, %r8 # starting location of the string
   movq  $0, %r9   # counter for the length
 
-  _count_length_loop:
+  _pns_count_length_loop:
     # move the next character into al
     movb (%r8, %r9, 1), %al
     # check if it is a nul character (0x00)
     cmp  $0, %al
     # if nul  stop counting
-    jz   _end_length_loop
+    jz   _pns_end_length_loop
 
     # increase the counter
     inc  %r9
     # continue looping
-    jmp  _count_length_loop
+    jmp  _pns_count_length_loop
 
 
-  _end_length_loop:
+  _pns_end_length_loop:
 
   movq $1, %rax # syscall 1 == sys_write
   movq $1, %rdi # fd 1 == stdout
