@@ -1,3 +1,5 @@
+.text
+
 # void print_nul_string(quad string_address)
 print_nul_string:
   push  %rbp

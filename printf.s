@@ -1,8 +1,8 @@
 .text
 	.global _start
-	string: .asciz "test %% %r %s %d %u"
+	string: .asciz "test %% %r %s %d %u\n"
 
-.include "decimal_format.s"
+.include "print_number.s"
 .include "print_nul_string.s"
 
 
