@@ -4,6 +4,9 @@
 print_nul_string:
   push  %rbp
   movq  %rsp, %rbp
+	
+  push %r8
+  push %r9
 
   movq  %rdi, %r8 # starting location of the string
   movq  $0, %r9   # counter for the length
@@ -29,7 +32,10 @@ print_nul_string:
   movq %r8, %rsi # starting address
   movq %r9, %rdx # length
   syscall
+ 
 
+  pop %r9
+  pop %r8
 
   movq  %rbp, %rsp
   popq  %rbp

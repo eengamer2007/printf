@@ -35,7 +35,7 @@ print_unsigned:
 
   # syscall to write the number
   movq $1, %rax # syscall 1 == sys_write
-
+  
   movq $1, %rdi # fd 1 == stdout
 
   movq %rsp, %rsi # starting address
@@ -68,16 +68,16 @@ print_decimal:
 
   _pde_neg:
     # print the negative sign
+    push %rdi
     movq $1, %rax # syscall 1 == sys_write
     movq $1, %rdi # fd 1 == stdout
     movq $minus, %rsi # starting address
     movq $1, %rdx # the length is 1
     syscall
+    pop %rdi
 
     # two's complement negate the parameter
     neg %rdi
-    # move the negative value back into rdi
-    movq %rax, %rdi
 
   _pde_end:
     # prints the number as an unsigned one
