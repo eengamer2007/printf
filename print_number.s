@@ -17,8 +17,8 @@ print_unsigned:
     # the result of the division is now stored in %rax
     # the remainder of the division is now stored in %rdx
 
-    # add 0x30 to the digit to transform into the ascii value
-    addb  $0x30, %dl
+    # add '0' to the digit to transform into the ascii value
+    addb  $'0', %dl
 
     # push the single byte onto the stack (since it is stored backwards)
     # we (ab)use this property in order to generate the string backwards and then print it the right way around
