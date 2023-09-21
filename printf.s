@@ -1,7 +1,7 @@
 .text
 	.global _start
-	string: .asciz "test %% %d %u %s %g\n"
-
+	string: .asciz "test %% %d %u %s %g %u %u %u %u %u %u %u %u\n"
+	test_string: .asciz "test works"
 .include "print_number.s"
 .include "print_nul_string.s"
 
@@ -9,8 +9,16 @@
 _start:
 	mov $0xFFFFFFFFFFFFFFF0, %rsi
 	mov %rsi, %rdx
-	movq $string, %rdi
-	mov %rdi, %rcx
+	mov $string, %rdi
+	mov $test_string, %rcx
+	mov $3, %r8
+	mov $4, %r9
+	push $10
+	push $9
+	push $8
+	push $7
+	push $6
+	push $5
 	call not_my_printf
 
 	movq $60, %rax				# exit syscall
@@ -23,7 +31,7 @@ not_my_printf:
 	popq %r11
 	movq %rbp, %r10
 	movq %rsp, %rbp
-	
+
 	pushq %r9
 	push %r8
 	push %rcx
@@ -32,28 +40,30 @@ not_my_printf:
 	
 	movq %rdi, %r8				# save string start at r8 because rdi will be used
 
-	xorq %rbx, %rbx				# zero rbx to use as char counter
+	xorq %rcx, %rcx				# zero rcx to use as char counter
 	_printloop:
 		
-		cmpb $37, (%r8, %rbx)		# test for %
+		cmpb $37, (%r8, %rcx)		# test for %
 		je _format 
 
-		cmpb $0, (%r8, %rbx)		# check if character is 0
+		cmpb $0, (%r8, %rcx)		# check if character is 0
 		jz _printf_end				# if character is 0 jump to end
 
-		leaq (%r8, %rbx), %rdi
+		leaq (%r8, %rcx), %rdi
 		push %r11
 		push %r10
+		push %rcx
 		call print_char
+		pop %rcx
 		pop %r10
 		pop %r11
 		
-		incq %rbx			# increment char counter and jump to loop start
+		incq %rcx			# increment char counter and jump to loop start
 		jmp _printloop
 	_format:
-		incq %rbx
+		incq %rcx
 		
-		movb (%r8, %rbx), %r9b	# move next character into a reg for quick access
+		movb (%r8, %rcx), %r9b	# move next character into a reg for quick access
 		
 		cmpb $'%', %r9b		# check if %
 		je _percent_percent
@@ -69,7 +79,7 @@ not_my_printf:
 		
 		jmp _printf_else
 	_percent_percent:
-	leaq (%r8, %rbx), %rdi
+	leaq (%r8, %rcx), %rdi
 	mov $print_char, %r9
 	jmp _call_printer
 	_percent_d:
@@ -88,26 +98,30 @@ not_my_printf:
 	_printf_else:
 			
 		movq $1, %rax			# print % and next character
-		leaq -1(%r8, %rbx), %rsi	# loade percent and following character to be printed
+		leaq -1(%r8, %rcx), %rsi	# loade percent and following character to be printed
 		movq $1, %rdi
 		movq $2, %rdx
 		push %r11
 		push %r10
+		push %rcx
 		syscall
+		pop %rcx
 		pop %r10
 		pop %r11
 
-		incq %rbx
+		incq %rcx
 		jmp _printloop
 
 	_call_printer:
 		push %r10
 		push %r11
+		push %rcx
 		call *%r9
+		pop %rcx
 		pop %r11
 		pop %r10
 
-		incq %rbx
+		incq %rcx
 		jmp _printloop
 
 	_printf_end:	
