@@ -9,8 +9,6 @@
 	test_string: .asciz "test works"
 
 main:
-	enter $0, $0
-
 	# printf call
 	mov $0xFFFFFFFFFFFFFFF0, %rsi
 	mov %rsi, %rdx
@@ -25,8 +23,6 @@ main:
 	push $6
 	push $5
 	call my_printf
-
-	leave
 
 	movq $60, %rax		# exit syscall
 	xorq %rdi, %rdi

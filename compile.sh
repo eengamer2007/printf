@@ -1,2 +1,3 @@
-gcc -no-pie -g -o out printf.s &&
+as -g -o printf.o $1 &&
+	ld --entry main -o out printf.o &&
 	./out
