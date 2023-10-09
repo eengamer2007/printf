@@ -4,11 +4,13 @@
 	old_rbx:          .quad 0
 
 .text
-	.global _start
+	.global main
 	string: .asciz "test %% %d %u '%s' %g %u %u %u %u %u %u %u %u\n"
 	test_string: .asciz "test works"
 
-_start:
+main:
+	enter $0, $0
+
 	# printf call
 	mov $0xFFFFFFFFFFFFFFF0, %rsi
 	mov %rsi, %rdx
@@ -22,15 +24,17 @@ _start:
 	push $7
 	push $6
 	push $5
-	call not_my_printf
+	call my_printf
 
-	movq $60, %rax				# exit syscall
+	leave
+
+	movq $60, %rax		# exit syscall
 	xorq %rdi, %rdi
 	syscall
 
 # rdi: format string
 # ...: arugmets to be formated
-not_my_printf:
+my_printf:
 	popq return_addr		# save the return address in return_addr
 
 	movq %rbp, old_rbp		# save the rbp
@@ -56,9 +60,12 @@ not_my_printf:
 		jz _printf_end			# if character is 0 jump to end
 
 		# print the character, making sure we save all the vulnerable caller-saved registers
-		movq %rbx, %rdi
-		call print_char
-		
+		movq $1, %rax			# print current character
+		movq $1, %rdi
+		movq %rbx, %rsi
+		movq $1, %rdx
+		syscall
+
 		incq %rbx			# increment char counter and jump to loop start
 		jmp _printloop
 	_format:
@@ -81,44 +88,88 @@ not_my_printf:
 		
 		jmp _printf_else
 	_percent_percent:
-	# print a percent character
-	movq %rbx, %rdi
-	mov $print_char, %r9
-	jmp _call_printer
+		# print a percent character
+		movq $1, %rax			# print current character
+		movq %rbx, %rsi
+		movq $1, %rdi
+		movq $1, %rdx
+		syscall
+
+		# increase r8 to the next character
+		incq %rbx
+		jmp _printloop
+
 	_percent_d:
-	# copy the address of the print_decimal into r9 to call it with the next value
-	pop %rdi
-	mov $print_decimal, %r9
-	jmp _call_printer
+		# copy the address of the print_decimal into r9 to call it with the next value
+		pop %rdi
+
+		test $8, %rsp
+		jz 8f
+
+		# if stack not aligned
+		subq $8, %rsp
+		call print_decimal
+		addq $8, %rsp
+
+		incq %rbx
+		jmp _printloop
+
+		# if stack aligned
+		8:
+		  call print_decimal
+
+		  incq %rbx
+		  jmp _printloop
 	_percent_u:
-	# copy the address of the print_unsigned into r9 to call it with the next value
-	pop %rdi
-	mov $print_unsigned, %r9
-	jmp _call_printer
-	_percent_s:
-	# copy the address of the print_nul_string into r9 to call it with the next value
-	pop %rdi
-	mov $print_nul_string, %r9
-	jmp _call_printer
+		# copy the address of the print_unsigned into r9 to call it with the next value
+		pop %rdi
 		
+		test $8, %rsp
+		jz 8f
+
+		# if stack not aligned
+		subq $8, %rsp
+		call print_unsigned
+		addq $8, %rsp
+
+		incq %rbx
+		jmp _printloop
+
+		# if stack aligned
+		8:
+		  call print_unsigned
+
+		  incq %rbx
+		  jmp _printloop
+	_percent_s:
+		# copy the address of the print_nul_string into r9 to call it with the next value
+		pop %rdi
+		
+		test $8, %rsp
+		jz 8f
+
+		# if stack not aligned
+		subq $8, %rsp
+		call print_nul_string
+		addq $8, %rsp
+
+		incq %rbx
+		jmp _printloop
+
+		# if stack aligned
+		8:
+		  call print_nul_string
+
+		  incq %rbx
+		  jmp _printloop
 	_printf_else:
-			
 		movq $1, %rax			# print % and next character
 		leaq -1(%rbx), %rsi	    # load percent and following character to be printed
 		movq $1, %rdi
 		movq $2, %rdx
 		syscall
-		
+
 		# increase r8 to go to the next character
-		incq %rbx
-		jmp _printloop
-
-	_call_printer:
-		
-		# call the function we have moved in r9, save the vulnerable registers
-		call *%r9
-
-		# increase r8 to the next character
 		incq %rbx
 		jmp _printloop
 
@@ -126,26 +177,11 @@ not_my_printf:
 
 	# modified 'epilogue'
 	mov %rbp, %rsp		# restore rsp
-	mov $old_rbp, %rbp	# restore rbp
+	mov old_rbp, %rbp	# restore rbp
+	mov old_rbx, %rbx	# restore rbx
 
-	jmp *return_addr     # return to the call location
-
-# rdi: address
-print_char:
-	pushq %rbp				# prologue
-	movq %rsp, %rbp
-		
-	movq $1, %rax			# print current character
-	movq %rdi, %rsi
-	movq $1, %rdi
-	movq $1, %rdx
-	syscall
-
-	mov %rbp, %rsp
-	popq %rbp
+	pushq return_addr     # return to the call location
 	ret
-
-
 
 # void print_unsigned(quad n)
 # prints the unsigned number n using syscalls
