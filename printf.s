@@ -1,3 +1,8 @@
+.data
+	old_rbp:          .quad 0
+	return_addr:      .quad 0
+	old_rbx:          .quad 0
+
 .text
 	.global _start
 	string: .asciz "test %% %d %u '%s' %g %u %u %u %u %u %u %u %u\n"
@@ -26,9 +31,12 @@ _start:
 # rdi: format string
 # ...: arugmets to be formated
 not_my_printf:
-	popq %r11				# save the return address in %r11
-	movq %rbp, %r10				# save %rbp to %r10
-	movq %rsp, %rbp				# finish the "modified" prologue
+	popq return_addr		# save the return address in return_addr
+
+	movq %rbp, old_rbp		# save the rbp
+	movq %rsp, %rbp			# finish the "modified" prologue
+
+	movq %rbx, old_rbx 		# save the value of rbx
 
 	# push all the arguments onto the stack so that we can easily pop them off
 	pushq %r9
@@ -37,33 +45,26 @@ not_my_printf:
 	push %rdx
 	push %rsi
 	
-	movq %rdi, %r8				# save string start at r8 because rdi will be used
+	movq %rdi, %rbx			# rbx is our current charcter
 
-	xorq %rcx, %rcx				# zero rcx to use as char counter
 	_printloop:
 		
-		cmpb $37, (%r8, %rcx)		# test for %
+		cmpb $'%', (%rbx)		# test for %
 		je _format 
 
-		cmpb $0, (%r8, %rcx)		# check if character is 0
-		jz _printf_end				# if character is 0 jump to end
+		cmpb $0, (%rbx)			# check if character is 0
+		jz _printf_end			# if character is 0 jump to end
 
 		# print the character, making sure we save all the vulnerable caller-saved registers
-		leaq (%r8, %rcx), %rdi
-		push %r11
-		push %r10
-		push %rcx
+		movq %rbx, %rdi
 		call print_char
-		pop %rcx
-		pop %r10
-		pop %r11
 		
-		incq %rcx			# increment char counter and jump to loop start
+		incq %rbx			# increment char counter and jump to loop start
 		jmp _printloop
 	_format:
-		incq %rcx		# increase rcx to be the next character
+		incq %rbx			# increase rcx to be the next character
 		
-		movb (%r8, %rcx), %r9b	# move next character into a reg for quick access
+		movb (%rbx), %r9b	# move next character into a reg for quick access
 		
 		# if we wanted, we could have optimized this further by making it branchless with a lookup table
 		cmpb $'%', %r9b		# check if %
@@ -81,7 +82,7 @@ not_my_printf:
 		jmp _printf_else
 	_percent_percent:
 	# print a percent character
-	leaq (%r8, %rcx), %rdi
+	movq %rbx, %rdi
 	mov $print_char, %r9
 	jmp _call_printer
 	_percent_d:
@@ -103,45 +104,31 @@ not_my_printf:
 	_printf_else:
 			
 		movq $1, %rax			# print % and next character
-		leaq -1(%r8, %rcx), %rsi	# loade percent and following character to be printed
+		leaq -1(%rbx), %rsi	    # load percent and following character to be printed
 		movq $1, %rdi
 		movq $2, %rdx
-		
-		# save the vulnerable registers
-		push %r11
-		push %r10
-		push %rcx
 		syscall
-		pop %rcx
-		pop %r10
-		pop %r11
 		
-		# increase rcx to go to the next character
-		incq %rcx
+		# increase r8 to go to the next character
+		incq %rbx
 		jmp _printloop
 
 	_call_printer:
 		
 		# call the function we have moved in r9, save the vulnerable registers
-		push %r10
-		push %r11
-		push %rcx
 		call *%r9
-		pop %rcx
-		pop %r11
-		pop %r10
 
-		# increase rcx to the next character
-		incq %rcx
+		# increase r8 to the next character
+		incq %rbx
 		jmp _printloop
 
 	_printf_end:	
-	# popq %r8
 
 	# modified 'epilogue'
-	mov %rbp, %rsp # restore rsp
-	mov %r10, %rbp # restore rbp from r10
-	jmp *%r11      # return to the call location
+	mov %rbp, %rsp		# restore rsp
+	mov $old_rbp, %rbp	# restore rbp
+
+	jmp *return_addr     # return to the call location
 
 # rdi: address
 print_char:
